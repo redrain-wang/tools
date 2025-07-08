@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手写体文字图片生成器</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Smiley+Sans&family=LXGW+WenKai+Lite&display=swap');
+
+        /* 自定义字体样式 */
+        .font-zcool-kuaile {
+            font-family: 'ZCOOL KuaiLe', cursive;
+        }
+        .font-smiley-sans {
+            font-family: 'Smiley Sans', sans-serif;
+        }
+        .font-lxgw-wenkai {
+            font-family: 'LXGW WenKai Lite', cursive; /* 使用 Lite 版本以确保兼容性 */
+        }
+
+        /* 隐藏Canvas，只显示图片 */
+        #outputCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 min-h-screen flex items-center justify-center p-4 font-sans text-gray-800">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-4xl w-full">
+        <h1 class="text-4xl font-extrabold text-center text-purple-700 mb-8 tracking-tight">手写体文字图片生成器</h1>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- 设置表单 -->
+            <div class="space-y-6">
+                <div>
+                    <label for="inputText" class="block text-lg font-semibold text-gray-700 mb-2">输入文字:</label>
+                    <textarea id="inputText" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-300 ease-in-out text-base h-40 resize-y" placeholder="在这里输入你想要生成手写体的文字...（回车和空格会被保留）"></textarea>
+                </div>
+
+                <div>
+                    <label for="fontSelect" class="block text-lg font-semibold text-gray-700 mb-2">选择字体:</label>
+                    <select id="fontSelect" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-300 ease-in-out text-base">
+                        <option value="LXGW WenKai Lite">霞鹜文楷 (LXGW WenKai Lite)</option>
+                        <option value="ZCOOL KuaiLe">站酷快乐体 (ZCOOL KuaiLe)</option>
+                        <option value="Smiley Sans">得意黑 (Smiley Sans)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="backgroundSelect" class="block text-lg font-semibold text-gray-700 mb-2">选择背景:</label>
+                    <select id="backgroundSelect" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-300 ease-in-out text-base">
+                        <option value="notebook">笔记本</option>
+                        <option value="parchment-texture">羊皮纸纹理</option>
+                        <option value="vintage-paper">复古纸张</option>
+                        <option value="white">纯白</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="textColor" class="block text-lg font-semibold text-gray-700 mb-2">文字颜色:</label>
+                    <input type="color" id="textColor" value="#333333" class="w-full h-10 border border-gray-300 rounded-lg cursor-pointer focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-300 ease-in-out">
+                </div>
+
+                <div>
+                    <label for="fontSize" class="block text-lg font-semibold text-gray-700 mb-2">字体大小:</label>
+                    <input type="range" id="fontSize" min="20" max="80" value="40" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                    <span id="fontSizeValue" class="block text-sm text-gray-600 mt-2 text-right">40px</span>
+                </div>
+
+                <!-- 新增文字位置设置 -->
+                <div>
+                    <label for="textAlignment" class="block text-lg font-semibold text-gray-700 mb-2">文字位置 (水平):</label>
+                    <select id="textAlignment" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-300 ease-in-out text-base">
+                        <option value="left">居左</option>
+                        <option value="center">居中</option>
+                        <option value="right">居右</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="topOffset" class="block text-lg font-semibold text-gray-700 mb-2">距离顶部 (%):</label>
+                    <input type="range" id="topOffset" min="0" max="100" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                    <span id="topOffsetValue" class="block text-sm text-gray-600 mt-2 text-right">5%</span>
+                    <span class="block text-sm text-gray-600 mt-1">设置文字内容块距离图片顶部的百分比。</span>
+                </div>
+
+                <!-- 新增随机抖动强度 -->
+                <div>
+                    <label for="randomnessIntensity" class="block text-lg font-semibold text-gray-700 mb-2">随机抖动强度:</label>
+                    <input type="range" id="randomnessIntensity" min="0" max="15" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                    <span id="randomnessIntensityValue" class="block text-sm text-gray-600 mt-2 text-right">5</span>
+                    <span class="block text-sm text-gray-600 mt-1">增加文字的随机偏移，模拟手写不规则感（0为无抖动）。</span>
+                </div>
+
+                <!-- 新增随机倾斜角度 -->
+                <div>
+                    <label for="lineSkewAngle" class="block text-lg font-semibold text-gray-700 mb-2">随机倾斜角度 (度):</label>
+                    <input type="range" id="lineSkewAngle" min="0" max="5" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                    <span id="lineSkewAngleValue" class="block text-sm text-gray-600 mt-2 text-right">0°</span>
+                    <span class="block text-sm text-gray-600 mt-1">设置每行/字符的随机倾斜范围（0为无倾斜）。</span>
+                </div>
+
+                <!-- 新增垂直书写模式 -->
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="verticalWriting" class="h-5 w-5 text-purple-600 rounded focus:ring-purple-500">
+                    <label for="verticalWriting" class="text-lg font-semibold text-gray-700">垂直书写模式</label>
+                </div>
+
+                <!-- 新增垂直书写方向选项 -->
+                <div class="space-y-2" id="verticalDirectionOptions" style="display: none;"> <!-- 初始隐藏 -->
+                    <label for="verticalDirection" class="block text-lg font-semibold text-gray-700 mb-2">垂直书写方向:</label>
+                    <select id="verticalDirection" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-400 focus:border-transparent transition duration-300 ease-in-out text-base">
+                        <option value="ltr">从左到右</option>
+                        <option value="rtl">从右到左</option>
+                    </select>
+                </div>
+
+
+                <button id="generateBtn" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg text-xl font-bold hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-4 focus:ring-purple-300 transform transition duration-300 ease-in-out hover:scale-105 shadow-lg" disabled>生成图片 (加载中...)</button>
+
+                <div id="loadingIndicator" class="hidden text-center text-purple-600 font-semibold mt-4">
+                    正在生成图片，请稍候...
+                </div>
+            </div>
+
+            <!-- 图片预览区 -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-inner flex items-center justify-center min-h-[300px] border border-gray-200 relative">
+                <img id="outputImage" class="max-w-full h-auto rounded-lg shadow-md" alt="生成的图片" style="max-height: 400px; display: none;">
+                <canvas id="outputCanvas" class="border border-gray-300 rounded-lg shadow-md"></canvas>
+                <p id="placeholderText" class="text-gray-500 text-center">点击“生成图片”按钮查看效果</p>
+            </div>
+        </div>
+
+        <!-- 按钮区 -->
+        <div class="mt-8 flex justify-center space-x-4">
+            <a id="downloadBtn" download="handwritten_text.png" class="hidden bg-green-500 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300 transform transition duration-300 ease-in-out hover:scale-105 shadow-md">下载图片</a>
+            <button id="copyBtn" class="hidden bg-blue-500 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transform transition duration-300 ease-in-out hover:scale-105 shadow-md">复制图片链接</button>
+            <div id="messageBox" class="fixed bottom-8 right-8 bg-black bg-opacity-75 text-white py-3 px-6 rounded-lg shadow-lg hidden"></div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputText = document.getElementById('inputText');
+            const fontSelect = document.getElementById('fontSelect');
+            const backgroundSelect = document.getElementById('backgroundSelect');
+            const textColorInput = document.getElementById('textColor');
+            const fontSizeInput = document.getElementById('fontSize');
+            const fontSizeValueSpan = document.getElementById('fontSizeValue');
+            const textAlignmentSelect = document.getElementById('textAlignment');
+            const topOffsetInput = document.getElementById('topOffset');
+            const topOffsetValueSpan = document.getElementById('topOffsetValue');
+            const randomnessIntensityInput = document.getElementById('randomnessIntensity');
+            const randomnessIntensityValueSpan = document.getElementById('randomnessIntensityValue');
+            const lineSkewAngleInput = document.getElementById('lineSkewAngle');
+            const lineSkewAngleValueSpan = document.getElementById('lineSkewAngleValue');
+            const verticalWritingCheckbox = document.getElementById('verticalWriting');
+            const verticalDirectionOptions = document.getElementById('verticalDirectionOptions');
+            const verticalDirectionSelect = document.getElementById('verticalDirection');
+            const generateBtn = document.getElementById('generateBtn');
+            const outputImage = document.getElementById('outputImage');
+            const outputCanvas = document.getElementById('outputCanvas');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const placeholderText = document.getElementById('placeholderText');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const messageBox = document.getElementById('messageBox');
+            const ctx = outputCanvas.getContext('2d');
+
+            // Fixed Canvas dimensions for 9:16 aspect ratio
+            const CANVAS_WIDTH = 720;
+            const CANVAS_HEIGHT = 1280;
+            const BASE_PADDING = 60; // Base padding from canvas edges
+
+            let debounceTimer; // For debouncing text input
+
+            // Function to debounce calls
+            const debounce = (func, delay) => {
+                return function(...args) {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => func.apply(this, args), delay);
+                };
+            };
+
+            // Initially disable the generate button, enable after fonts load
+            generateBtn.disabled = true;
+            generateBtn.textContent = '生成图片 (加载中...)';
+
+            // Wait for all Google Fonts to be loaded
+            document.fonts.ready.then(() => {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '生成图片';
+                // Trigger initial image generation once fonts are loaded
+                generateImage();
+
+                // Attach event listeners for real-time updates
+                inputText.addEventListener('input', debounce(generateImage, 500)); // Debounce text input
+                fontSelect.addEventListener('change', generateImage);
+                backgroundSelect.addEventListener('change', generateImage);
+                textColorInput.addEventListener('input', generateImage);
+                fontSizeInput.addEventListener('input', generateImage);
+                textAlignmentSelect.addEventListener('change', generateImage);
+                topOffsetInput.addEventListener('input', generateImage);
+                randomnessIntensityInput.addEventListener('input', generateImage);
+                lineSkewAngleInput.addEventListener('input', generateImage);
+                verticalWritingCheckbox.addEventListener('change', generateImage);
+                verticalDirectionSelect.addEventListener('change', generateImage); // New event listener for vertical direction
+
+            }).catch(error => {
+                console.error("字体加载失败:", error);
+                showMessage("字体加载失败，请刷新页面重试。");
+                generateBtn.textContent = '字体加载失败';
+            });
+
+            // Update font size display
+            fontSizeInput.addEventListener('input', () => {
+                fontSizeValueSpan.textContent = `${fontSizeInput.value}px`;
+            });
+
+            // Update top offset display (percentage)
+            topOffsetInput.addEventListener('input', () => {
+                topOffsetValueSpan.textContent = `${topOffsetInput.value}%`;
+            });
+
+            // Update randomness intensity display
+            randomnessIntensityInput.addEventListener('input', () => {
+                randomnessIntensityValueSpan.textContent = randomnessIntensityInput.value;
+            });
+
+            // Update line skew angle display
+            lineSkewAngleInput.addEventListener('input', () => {
+                lineSkewAngleValueSpan.textContent = `${lineSkewAngleInput.value}°`;
+            });
+
+            // Toggle vertical writing options visibility and enable/disable horizontal alignment
+            verticalWritingCheckbox.addEventListener('change', () => {
+                if (verticalWritingCheckbox.checked) {
+                    verticalDirectionOptions.style.display = 'block';
+                    textAlignmentSelect.disabled = true; // Disable horizontal alignment
+                    textAlignmentSelect.value = 'left'; // Reset to left if user unchecks later
+                } else {
+                    verticalDirectionOptions.style.display = 'none';
+                    textAlignmentSelect.disabled = false; // Enable horizontal alignment
+                }
+            });
+
+            // Show message box temporarily
+            function showMessage(message) {
+                messageBox.textContent = message;
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 3000); // Hide after 3 seconds
+            }
+
+            // Function to draw handwritten text on canvas
+            function drawHandwrittenText(context, text, font, textColor, fontSize, startX, startY, maxWidth, lineHeight, alignment, randomnessIntensity, lineSkewAngle, isVertical, verticalDirection) {
+                context.fillStyle = textColor;
+                context.font = `${fontSize}px "${font}"`;
+                context.textBaseline = 'top';
+
+                const textLines = text.split('\n'); // Preserve user's newlines
+
+                if (isVertical) {
+                    // Vertical writing mode: characters stack, columns move left-to-right or right-to-left
+                    let currentColumnX;
+                    const baseColumnAdvance = fontSize * 1.5;
+                    const charVerticalSpacing = fontSize * 1.2;
+
+                    // Initialize starting X for columns based on vertical direction
+                    if (verticalDirection === 'rtl') {
+                        currentColumnX = CANVAS_WIDTH - BASE_PADDING - fontSize; // Start from right
+                    } else { // ltr
+                        currentColumnX = startX; // Start from left
+                    }
+
+                    let currentColumnY = startY;
+
+                    for (let lineIndex = 0; lineIndex < textLines.length; lineIndex++) {
+                        const lineContent = textLines[lineIndex];
+
+                        // For each user-defined line (separated by \n), start a new column in vertical mode
+                        // Except for the very first line if it fits.
+                        // Also, if the current column is full, start a new one.
+                        // Skip starting a new column if the previous line was empty and this one is too.
+                        if (lineIndex > 0 || (currentColumnY > startY && lineContent.length > 0)) {
+                             if (verticalDirection === 'rtl') {
+                                currentColumnX -= (baseColumnAdvance + (Math.random() * randomnessIntensity * 1.5));
+                             } else {
+                                currentColumnX += (baseColumnAdvance + (Math.random() * randomnessIntensity * 1.5));
+                             }
+                            currentColumnY = startY; // Reset Y for new column
+
+                            // Check if new column goes out of bounds horizontally
+                            if (verticalDirection === 'rtl' && currentColumnX < BASE_PADDING - (fontSize/2)) { // Allow a bit of overflow to avoid abrupt cutoff
+                                showMessage('垂直模式文字超出图片左侧边界，请减少内容或调整设置。');
+                                return; // Stop drawing
+                            }
+                            if (verticalDirection === 'ltr' && currentColumnX + fontSize > CANVAS_WIDTH - BASE_PADDING + (fontSize/2)) {
+                                showMessage('垂直模式文字超出图片右侧边界，请减少内容或调整设置。');
+                                return; // Stop drawing
+                            }
+                        }
+
+                        for (let i = 0; i < lineContent.length; i++) {
+                            const char = lineContent[i];
+
+                            // Skip empty characters that might result from extra spaces at line ends/starts
+                            // This helps in clean vertical layout, assuming spaces between words are often handled by column advance
+                            if (char === ' ' && (i === lineContent.length - 1 || i === 0)) {
+                                continue;
+                            }
+
+                            // Apply character jitter (x, y) relative to current position
+                            const charXJitter = (Math.random() - 0.5) * randomnessIntensity;
+                            const charYJitter = (Math.random() - 0.5) * randomnessIntensity;
+
+                            context.save();
+                            context.translate(currentColumnX + charXJitter, currentColumnY + charYJitter);
+
+                            // Apply random rotation to each character
+                            const randomCharSkewRad = ((Math.random() - 0.5) * lineSkewAngle) * Math.PI / 180;
+                            context.rotate(randomCharSkewRad);
+
+                            // For vertical text, characters are typically drawn centered horizontally in their "column slot"
+                            context.textAlign = 'center'; // Center the character around the current translation point
+                            context.fillText(char, 0, 0); // Draw at (0,0) relative to translated origin
+
+                            context.restore();
+
+                            currentColumnY += charVerticalSpacing + (Math.random() * randomnessIntensity * 0.5); // Advance Y
+
+                            // If current character exceeds column height, move to next column
+                            if (currentColumnY + fontSize > CANVAS_HEIGHT - BASE_PADDING) {
+                                currentColumnY = startY; // Reset Y for new column
+                                if (verticalDirection === 'rtl') {
+                                    currentColumnX -= (baseColumnAdvance + (Math.random() * randomnessIntensity * 1.5));
+                                } else {
+                                    currentColumnX += (baseColumnAdvance + (Math.random() * randomnessIntensity * 1.5));
+                                }
+
+                                // Check again if new column goes out of bounds horizontally
+                                if (verticalDirection === 'rtl' && currentColumnX < BASE_PADDING - (fontSize/2)) {
+                                    showMessage('垂直模式文字超出图片左侧边界，请减少内容或调整设置。');
+                                    return; // Stop drawing
+                                }
+                                if (verticalDirection === 'ltr' && currentColumnX + fontSize > CANVAS_WIDTH - BASE_PADDING + (fontSize/2)) {
+                                    showMessage('垂直模式文字超出图片右侧边界，请减少内容或调整设置。');
+                                    return; // Stop drawing
+                                }
+                            }
+                        }
+                    }
+
+                } else {
+                    // Horizontal writing mode
+                    let currentY = startY;
+
+                    for (let i = 0; i < textLines.length; i++) {
+                        const line = textLines[i];
+
+                        // Apply random Y offset for the entire line
+                        const lineYJitter = (Math.random() - 0.5) * randomnessIntensity;
+                        let lineActualY = currentY + lineYJitter;
+
+                        // Apply random line skew
+                        const randomLineSkewRad = ((Math.random() - 0.5) * lineSkewAngle) * Math.PI / 180;
+
+                        context.save(); // Save the current state of the canvas context
+
+                        let translationX;
+                        // Calculate the estimated width of the entire line for centering/right-aligning
+                        let estimatedLineWidth = 0;
+                        for (let k = 0; k < line.length; k++) {
+                            estimatedLineWidth += context.measureText(line[k]).width;
+                        }
+
+                        if (alignment === 'center') {
+                            translationX = (CANVAS_WIDTH / 2) - (estimatedLineWidth / 2);
+                        } else if (alignment === 'right') {
+                            translationX = CANVAS_WIDTH - BASE_PADDING - estimatedLineWidth;
+                        } else { // default 'left'
+                            translationX = startX;
+                        }
+
+                        // Ensure text does not go outside padding if estimatedLineWidth is very large
+                        translationX = Math.max(BASE_PADDING, translationX);
+                        if (translationX + estimatedLineWidth > CANVAS_WIDTH - BASE_PADDING) {
+                            translationX = CANVAS_WIDTH - BASE_PADDING - estimatedLineWidth;
+                        }
+
+
+                        context.translate(translationX, lineActualY);
+                        context.rotate(randomLineSkewRad); // Apply rotation after translation
+
+                        let charDrawX = 0; // X position relative to current translation origin
+
+                        // Draw characters in the line
+                        for (let j = 0; j < line.length; j++) {
+                            const char = line[j];
+                            const charWidth = context.measureText(char).width;
+
+                            // Apply character jitter (relative to the current rotated line's local coordinates)
+                            const charXJitter = (Math.random() - 0.5) * randomnessIntensity;
+                            const charYJitter = (Math.random() - 0.5) * randomnessIntensity;
+
+                            context.fillText(char, charDrawX + charXJitter, charYJitter);
+                            charDrawX += charWidth; // Advance X for next character
+                        }
+
+                        context.restore(); // Restore to previous canvas state
+
+                        currentY += lineHeight + (Math.random() * randomnessIntensity * 0.5); // Advance Y for next line, add random line spacing
+
+                        // Check if text has gone too far down the page
+                        if (currentY + fontSize > (CANVAS_HEIGHT - BASE_PADDING)) {
+                            showMessage('文字内容过多，可能超出图片范围。');
+                            break; // Stop drawing if out of bounds
+                        }
+                    }
+                }
+            }
+
+
+            // Generate Image function
+            async function generateImage() {
+                const text = inputText.value; // Get raw text, don't trim to preserve spaces
+                // No need to check text.trim() here as it's for initial display.
+                // If text is truly empty, placeholder will be shown.
+
+                loadingIndicator.classList.remove('hidden');
+                placeholderText.classList.add('hidden'); // Hide placeholder when generating
+                outputImage.style.display = 'none'; // Hide old image
+
+                const selectedFont = fontSelect.value;
+                const selectedBackground = backgroundSelect.value;
+                const selectedTextColor = textColorInput.value;
+                const fontSize = parseInt(fontSizeInput.value);
+                const textAlignment = textAlignmentSelect.value;
+                const topOffsetPercentage = parseInt(topOffsetInput.value);
+                const topOffsetPixels = (topOffsetPercentage / 100) * CANVAS_HEIGHT;
+
+                const randomnessIntensity = parseInt(randomnessIntensityInput.value);
+                const lineSkewAngle = parseInt(lineSkewAngleInput.value);
+                const isVerticalWriting = verticalWritingCheckbox.checked;
+                const verticalDirection = verticalDirectionSelect.value;
+
+                outputCanvas.width = CANVAS_WIDTH;
+                outputCanvas.height = CANVAS_HEIGHT;
+
+                try {
+                    // Draw background
+                    if (selectedBackground === 'notebook') {
+                        ctx.fillStyle = '#F0F8FF';
+                        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+                        ctx.strokeStyle = '#ADD8E6';
+                        ctx.lineWidth = 1;
+                        const notebookLineHeight = fontSize * 1.5;
+                        for (let i = BASE_PADDING + topOffsetPixels; i < outputCanvas.height - BASE_PADDING; i += notebookLineHeight) {
+                            ctx.beginPath();
+                            ctx.moveTo(BASE_PADDING, i);
+                            ctx.lineTo(outputCanvas.width - BASE_PADDING, i);
+                            ctx.stroke();
+                        }
+                        ctx.strokeStyle = '#FF6347';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(BASE_PADDING + 20, 0);
+                        ctx.lineTo(BASE_PADDING + 20, outputCanvas.height);
+                        ctx.stroke();
+                    } else if (selectedBackground === 'parchment-texture') {
+                        drawParchmentTexture(ctx, outputCanvas.width, outputCanvas.height);
+                    } else if (selectedBackground === 'vintage-paper') {
+                        drawVintagePaperTexture(ctx, outputCanvas.width, outputCanvas.height);
+                    } else { // white
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+                    }
+
+                    // Only draw text if inputText is not empty after trimming
+                    if (text.trim() === '') {
+                        placeholderText.classList.remove('hidden'); // Show placeholder if text is empty
+                        outputImage.style.display = 'none'; // Hide generated image
+                        downloadBtn.classList.add('hidden');
+                        copyBtn.classList.add('hidden');
+                    } else {
+                        drawHandwrittenText(
+                            ctx,
+                            text,
+                            selectedFont,
+                            selectedTextColor,
+                            fontSize,
+                            BASE_PADDING,
+                            BASE_PADDING + topOffsetPixels,
+                            CANVAS_WIDTH - BASE_PADDING * 2,
+                            fontSize * 1.5,
+                            textAlignment,
+                            randomnessIntensity,
+                            lineSkewAngle,
+                            isVerticalWriting,
+                            verticalDirection
+                        );
+
+                        // Convert Canvas content to image
+                        const imageDataUrl = outputCanvas.toDataURL('image/png');
+                        outputImage.src = imageDataUrl;
+                        outputImage.style.display = 'block';
+                        downloadBtn.href = imageDataUrl;
+                        downloadBtn.classList.remove('hidden');
+                        copyBtn.classList.remove('hidden');
+                    }
+
+                } catch (error) {
+                    console.error("生成图片时发生错误:", error);
+                    showMessage("生成图片时发生错误，请检查输入或刷新页面。");
+                    // Ensure placeholder is shown if an error occurs during drawing
+                    placeholderText.classList.remove('hidden');
+                    outputImage.style.display = 'none';
+                    downloadBtn.classList.add('hidden');
+                    copyBtn.classList.add('hidden');
+                } finally {
+                    loadingIndicator.classList.add('hidden');
+                }
+            }
+
+            // Copy image link functionality
+            copyBtn.addEventListener('click', () => {
+                const imageDataUrl = outputImage.src;
+                if (imageDataUrl) {
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = imageDataUrl;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    try {
+                        document.execCommand('copy');
+                        showMessage('图片链接已复制到剪贴板！');
+                    } catch (err) {
+                        showMessage('复制失败，请手动复制。');
+                    }
+                    document.body.removeChild(tempInput);
+                } else {
+                    showMessage('请先生成图片！');
+                }
+            });
+
+            // Initial display for sliders
+            fontSizeValueSpan.textContent = `${fontSizeInput.value}px`;
+            topOffsetValueSpan.textContent = `${topOffsetInput.value}%`;
+            randomnessIntensityValueSpan.textContent = randomnessIntensityInput.value;
+            lineSkewAngleValueSpan.textContent = `${lineSkewAngleInput.value}°`;
+
+            // Canvas background drawing functions (retained from previous versions)
+            function drawParchmentTexture(context, width, height) {
+                context.fillStyle = '#F5DEB3';
+                context.fillRect(0, 0, width, height);
+                for (let i = 0; i < 8000; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const radius = Math.random() * 0.6 + 0.1;
+                    const alpha = Math.random() * 0.2 + 0.1;
+                    const color = Math.random() < 0.5 ? 'rgba(0,0,0,' : 'rgba(255,255,255,';
+                    context.beginPath();
+                    context.arc(x, y, radius, 0, Math.PI * 2);
+                    context.fillStyle = color + alpha + ')';
+                    context.fill();
+                }
+            }
+
+            function drawVintagePaperTexture(context, width, height) {
+                context.fillStyle = '#FDF6E3';
+                context.fillRect(0, 0, width, height);
+                for (let i = 0; i < 80; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const radius = Math.random() * 40 + 15;
+                    const alpha = Math.random() * 0.12 + 0.08;
+                    context.beginPath();
+                    context.arc(x, y, radius, 0, Math.PI * 2);
+                    context.fillStyle = `rgba(139,69,19,${alpha})`;
+                    context.fill();
+                }
+                context.strokeStyle = `rgba(139,69,19,0.05)`;
+                context.lineWidth = 0.8;
+                for (let i = 0; i < 30; i++) {
+                    context.beginPath();
+                    context.moveTo(Math.random() * width, Math.random() * height);
+                    context.lineTo(Math.random() * width, Math.random() * height);
+                    context.stroke();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
